@@ -1,0 +1,51 @@
+using BepInEx;
+using UnityEngine;
+using System;
+
+[BepInPlugin("com.ds.simplefps", "DSimpleFPS", "1.0.0")]
+public class DSimpleFPS : BaseUnityPlugin
+{
+    private GameObject _infoObj;
+    private TextMesh _infoMesh;
+    private float _deltaTime;
+    private float _updateTimer;
+
+    void Update()
+    {
+        _deltaTime += (Time.unscaledDeltaTime - _deltaTime) * 0.1f;
+        _updateTimer += Time.deltaTime;
+
+        // Optimized: only updates text 2 times per second to save RAM
+        if (_updateTimer > 0.5f)
+        {
+            _updateTimer = 0;
+            if (_infoObj == null && Camera.main != null) CreateDisplay();
+
+            if (_infoMesh != null)
+            {
+                float fps = 1.0f / _deltaTime;
+                float ram = GC.GetTotalMemory(false) / (1024f * 1024f);
+                _infoMesh.text = $"FPS: {Mathf.RoundToInt(fps)}\nRAM: {ram:F1}MB";
+            }
+        }
+
+        // Locks the text position and rotation to your VR headset
+        if (_infoObj != null && Camera.main != null)
+        {
+            Transform head = Camera.main.transform;
+            _infoObj.transform.position = head.position + (head.forward * 0.6f) + (head.up * 0.15f) + (head.right * -0.25f);
+            _infoObj.transform.rotation = head.rotation;
+        }
+    }
+
+    void CreateDisplay()
+    {
+        _infoObj = new GameObject("DSimpleFPS_Display");
+        _infoMesh = _infoObj.AddComponent<TextMesh>();
+        _infoMesh.fontSize = 80;
+        _infoMesh.color = Color.green;
+        
+        // This ensures the numbers show up on top of game objects
+        _infoObj.GetComponent<MeshRenderer>().material.renderQueue = 4000;
+    }
+}
