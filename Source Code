@@ -2,50 +2,58 @@ using BepInEx;
 using UnityEngine;
 using System;
 
-[BepInPlugin("com.ds.simplefps", "DSimpleFPS", "1.0.0")]
+[BepInPlugin("com.david.vrfps.final", "DavidStableVRFPS", "1.6.0")]
 public class DSimpleFPS : BaseUnityPlugin
 {
-    private GameObject _infoObj;
     private TextMesh _infoMesh;
+    private GameObject _infoObj;
     private float _deltaTime;
-    private float _updateTimer;
 
     void Update()
     {
         _deltaTime += (Time.unscaledDeltaTime - _deltaTime) * 0.1f;
-        _updateTimer += Time.deltaTime;
 
-        // Optimized: only updates text 2 times per second to save RAM
-        if (_updateTimer > 0.5f)
+        // Try to find the VR Camera (your head)
+        if (_infoObj == null && Camera.main != null)
         {
-            _updateTimer = 0;
-            if (_infoObj == null && Camera.main != null) CreateDisplay();
-
-            if (_infoMesh != null)
-            {
-                float fps = 1.0f / _deltaTime;
-                float ram = GC.GetTotalMemory(false) / (1024f * 1024f);
-                _infoMesh.text = $"FPS: {Mathf.RoundToInt(fps)}\nRAM: {ram:F1}MB";
-            }
+            CreateVRDisplay();
         }
 
-        // Locks the text position and rotation to your VR headset
-        if (_infoObj != null && Camera.main != null)
+        if (_infoMesh != null)
         {
-            Transform head = Camera.main.transform;
-            _infoObj.transform.position = head.position + (head.forward * 0.6f) + (head.up * 0.15f) + (head.right * -0.25f);
-            _infoObj.transform.rotation = head.rotation;
+            float fps = 1.0f / _deltaTime;
+            float ramUsed = GC.GetTotalMemory(false) / (1024f * 1024f);
+            
+            _infoMesh.text = $"FPS: {Mathf.RoundToInt(fps)}\nRAM: {ramUsed:F1}MB";
+            
+            // Keeps the text facing you perfectly
+            _infoObj.transform.LookAt(Camera.main.transform);
+            _infoObj.transform.Rotate(0, 180, 0); 
         }
     }
 
-    void CreateDisplay()
+    void CreateVRDisplay()
     {
-        _infoObj = new GameObject("DSimpleFPS_Display");
+        _infoObj = new GameObject("DavidFPS_VR_Text");
         _infoMesh = _infoObj.AddComponent<TextMesh>();
-        _infoMesh.fontSize = 80;
-        _infoMesh.color = Color.green;
+
+        // Attach it to your head so it follows you
+        _infoObj.transform.SetParent(Camera.main.transform);
         
-        // This ensures the numbers show up on top of game objects
+        // Position: 0.7 meters in front, slightly up and to the left
+        _infoObj.transform.localPosition = new Vector3(-0.3f, 0.2f, 0.7f);
+        
+        // Make it small enough for VR
+        _infoObj.transform.localScale = new Vector3(0.003f, 0.003f, 0.003f);
+
+        _infoMesh.fontSize = 80; // High quality text
+        _infoMesh.color = Color.green; // Green is very easy to spot in Gorilla Tag
+        _infoMesh.alignment = TextAlignment.Left;
+        _infoMesh.anchor = TextAnchor.UpperLeft;
+
+        // Make sure it draws on top of trees/walls
         _infoObj.GetComponent<MeshRenderer>().material.renderQueue = 4000;
+        
+        Logger.LogInfo("VR Display Created Successfully!");
     }
 }
