@@ -1,3 +1,70 @@
+READ ME!
+UNDERNEATH IS VERSION 3
+
+using BepInEx;
+using UnityEngine;
+using System;
+using System.Text;
+
+[BepInPlugin("com.ds.simplefps", "DSimpleFPS", "1.3.0")]
+public class DSimpleFPS : BaseUnityPlugin
+{
+    private GameObject _infoObj;
+    private TextMesh _infoMesh;
+    private float _deltaTime, _updateTimer, _cleanTimer;
+    private StringBuilder _sb = new StringBuilder(32);
+
+    void Update()
+    {
+        _deltaTime += (Time.unscaledDeltaTime - _deltaTime) * 0.1f;
+        _updateTimer += Time.deltaTime;
+        _cleanTimer += Time.deltaTime;
+
+        if (_infoObj == null && Camera.main != null) CreateDisplay();
+
+        // THE 60-SECOND CLEAN:
+        // Every 60 seconds, it tells Unity to dump unused memory.
+        if (_cleanTimer >= 60f)
+        {
+            _cleanTimer = 0f;
+            // This is the "Hard Clean" command
+            System.GC.Collect();
+        }
+
+        // Updates the text display every 0.5 seconds
+        if (_infoMesh != null && _updateTimer >= 0.5f)
+        {
+            _updateTimer = 0f;
+            float fps = 1.0f / _deltaTime;
+            float ram = GC.GetTotalMemory(false) / (1024f * 1024f);
+
+            _sb.Clear();
+            _sb.Append("FPS: ").Append(Mathf.RoundToInt(fps));
+            _sb.Append("\nRAM: ").Append(ram.ToString("F1")).Append("MB");
+            _infoMesh.text = _sb.ToString();
+        }
+    }
+
+    void CreateDisplay()
+    {
+        _infoObj = new GameObject("DSimpleFPS_Display");
+        _infoMesh = _infoObj.AddComponent<TextMesh>();
+        _infoObj.transform.SetParent(Camera.main.transform, false);
+
+        // Positioned top-left of your view
+        _infoObj.transform.localPosition = new Vector3(-0.3f, 0.2f, 1.0f);
+        _infoObj.transform.localScale = new Vector3(0.0025f, 0.0025f, 0.0025f);
+
+        _infoMesh.fontSize = 80;
+        _infoMesh.color = Color.green;
+        _infoObj.GetComponent<MeshRenderer>().material.renderQueue = 4000;
+    }
+}
+
+
+READ ME!
+UNDERNEATH IS VERSION 2
+
 using BepInEx;
 using UnityEngine;
 using System;
