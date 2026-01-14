@@ -1,3 +1,95 @@
+READ ME
+UNDERNEATH IS DSIMPLEFPSV4
+
+
+using BepInEx;
+using UnityEngine;
+using System;
+using System.Text;
+
+[BepInPlugin("com.ds.simpleoverlay", "DS_Performance_Clock", "1.4.0")]
+public class DSOverlay : BaseUnityPlugin
+{
+    private GameObject _container;
+    private TextMesh _fpsMesh, _clockMesh;
+    private float _deltaTime, _updateTimer;
+    private StringBuilder _sb = new StringBuilder(32);
+
+    void Update()
+    {
+        // 1. Calculate FPS logic every frame
+        _deltaTime += (Time.unscaledDeltaTime - _deltaTime) * 0.1f;
+        _updateTimer += Time.unscaledDeltaTime;
+
+        // 2. Manage UI Lifecycle (Create if missing or if camera changed)
+        if (Camera.main != null)
+        {
+            if (_container == null || _container.transform.parent != Camera.main.transform)
+            {
+                CreateDisplay();
+            }
+        }
+
+        // 3. Update Text every 0.5 seconds for efficiency
+        if (_updateTimer >= 0.5f && _fpsMesh != null && _clockMesh != null)
+        {
+            _updateTimer = 0f;
+
+            // --- Update FPS/RAM (Left Side) ---
+            float fps = 1.0f / _deltaTime;
+            float ram = GC.GetTotalMemory(false) / 1048576f; // Bytes to MB
+
+            _sb.Clear();
+            _sb.Append("FPS: ").Append(Mathf.RoundToInt(fps))
+               .Append("\nRAM: ").Append(ram.ToString("F1")).Append("MB");
+            _fpsMesh.text = _sb.ToString();
+
+            // --- Update EST Clock (Right Side) ---
+            // Handles Daylight Savings automatically
+            DateTime utcNow = DateTime.UtcNow;
+            TimeZoneInfo estZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            DateTime estTime = TimeZoneInfo.ConvertTimeFromUtc(utcNow, estZone);
+
+            _clockMesh.text = estTime.ToString("hh:mm tt");
+        }
+    }
+
+    void CreateDisplay()
+    {
+        // Destroy old container if it exists but lost its parent
+        if (_container != null) Destroy(_container);
+
+        _container = new GameObject("DS_Overlay_Root");
+        _container.transform.SetParent(Camera.main.transform, false);
+
+        // --- Create FPS Text (Top Left) ---
+        GameObject fpsObj = new GameObject("FPS_Display");
+        fpsObj.transform.SetParent(_container.transform, false);
+        _fpsMesh = fpsObj.AddComponent<TextMesh>();
+        SetupTextMesh(_fpsMesh, Color.green, TextAnchor.UpperLeft, TextAlignment.Left, new Vector3(-0.35f, 0.22f, 1.0f));
+
+        // --- Create Clock Text (Top Right) ---
+        GameObject clockObj = new GameObject("Clock_Display");
+        clockObj.transform.SetParent(_container.transform, false);
+        _clockMesh = clockObj.AddComponent<TextMesh>();
+        SetupTextMesh(_clockMesh, Color.cyan, TextAnchor.UpperRight, TextAlignment.Right, new Vector3(0.35f, 0.22f, 1.0f));
+    }
+
+    private void SetupTextMesh(TextMesh mesh, Color color, TextAnchor anchor, TextAlignment align, Vector3 pos)
+    {
+        mesh.fontSize = 70;
+        mesh.color = color;
+        mesh.anchor = anchor;
+        mesh.alignment = align;
+        mesh.transform.localPosition = pos;
+        mesh.transform.localScale = new Vector3(0.002f, 0.002f, 0.002f);
+        
+        // Ensure it draws on top of game objects
+        mesh.GetComponent<MeshRenderer>().material.renderQueue = 4000;
+    }
+}
+
+
 READ ME!
 UNDERNEATH IS VERSION 3
 
